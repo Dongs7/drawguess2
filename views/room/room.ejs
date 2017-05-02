@@ -1,0 +1,282 @@
+<% include ../layout/header%>
+<% include ../layout/navbar%>
+<h4 class="lead text_center">Room <%= roomname%></h4>
+<div class="container">
+  <div class="status_bar">
+    <div class="row">
+      <div class="col-xs-4">
+        <div class="colors" id="red"></div>
+        <div class="colors" id="yellow"></div>
+        <div class="colors" id="blue"></div>
+        <div class="colors" id="black"></div>
+      </div>
+      <div class="col-xs-4">
+        <p class="text_center player_notify"></p>
+      </div>
+      <div class="col-xs-4 text_center">
+        <div class="brush" id="b_15">15</div>
+        <div class="brush" id="b_10">10</div>
+        <div class="brush" id="b_5">5</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="container">
+  <div class="room-wrapper debug">
+
+    <div class="room-up debug">
+      <div class="start_btn">
+        <input id="start_btn" type="button" val="" disabled="true">
+      </div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="room-down debug">
+      <div class="room-chat">
+        <div class="chat-left debug">
+          <div class="chat-area">
+
+          </div>
+
+          <div class="chat-tool">
+            <form action="" id="room-chat">
+              <div class="form-group">
+                <input type="text" class="form-control" id="input-msg">
+              </div>
+            </form>
+          </div>
+
+        </div>
+        <div class="chat-right debug">
+          <p>Connected Users <span id="totalUser"></span></p>
+          <div class="userList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+$(document).ready(function(){
+  var socket = io.connect('/room');
+  var name = $('#username').html();
+
+
+  //Send username to the server
+  socket.emit('userName', name);
+  socket.emit('roomStatus?');
+
+
+  // Room Chatting Section
+  $('#room-chat').submit(function(e){
+    e.preventDefault();
+    var room_msg = $('#input-msg');
+    if(room_msg.val() === ''){
+      alert('Nothing to send');
+    }else{
+      socket.emit('newMsg', room_msg.val());
+      room_msg.val('');
+    }
+  });
+
+
+
+  socket.on('greeting', function(data){
+    var status = data.status;
+    var chat_area = $('.chat-area');
+    if(status === 0){
+      chat_area.append($('<p class="greet">').text(data.name + ' has joined the room'));
+    }else{
+      chat_area.append($('<p class="greet">').text(data.name + ' has left the room'));
+    }
+    scrollToBottom(chat_area);
+  });
+
+  socket.on('roomMsg', function(data){
+    var chat_area = $('.chat-area');
+    chat_area.append($('<p>').text(data.name + ' : ' + data.msg));
+    scrollToBottom(chat_area);
+  });
+
+  socket.on('usersInfo', function(data){
+    console.log(data.list);
+    var list = '';
+    var userList = data.list;
+    var userNum = data.num;
+    for (var i = 0; i < userList.length; i++){
+      list += userList[i] + '<br>'
+    }
+    $('.userList').html(list);
+    $('#totalUser').html(userNum + '/'+data.maxClient);
+  });
+
+  socket.on('updateRoomStatus', function(data){
+    console.log(data.msg);
+    $('#start_btn').val(data.msg);
+    var start_btn = $('#start_btn');
+    if(start_btn.val() === "Press Start game"){
+      start_btn.prop('disabled', false);
+    }
+  });
+
+  $('#start_btn').on('click', function(){
+    socket.emit('start:game');
+  });
+
+
+
+  socket.on('setup:answer', function(data){
+    var status = data.status;
+    var isEmpty = false;
+    if(status === 99){
+      $('#start_btn').val(data.msg);
+      while(!isEmpty){
+        var answer = prompt('Please enter your answer');
+        if(answer == '' || answer == null)
+        {
+          alert('Answer cannot be empty');
+        }else{
+          isEmpty = true;
+        }
+      };
+    }else{
+      $('#start_btn').val(data.msg);
+    }
+    socket.emit('round:answer', answer);
+    answer='';
+  })
+
+  socket.on('all:set', function(data){
+    if(data.status == 1){
+      $('.start_btn').css({
+        'opacity':'0',
+        'z-index':'-1'
+      });
+      $('.status_bar').css({
+        'opacity':'1',
+        'z-index':'1'
+      });
+      // socket.emit('timer:start');
+    }else{
+      $('.start_btn').css({
+        'opacity':'1',
+        'z-index':'3'
+      });
+      $('.status_bar').css({
+        'opacity':'0.5',
+        'z-index':'-1'
+      });
+      ctx.clearRect(0,0,width,height);
+      // socket.emit('timer:stop');
+    }
+
+  });
+
+  socket.on('timer', function(data){
+    $('.player_notify').html(data);
+  });
+
+  socket.on('winner', function(data){
+    alert(data.msg +' , and the winner is ' + data.winner + '. The Winner will get 10 points');
+    //여기 다시제대로
+    socket.emit('roomStatus?');
+  });
+
+  socket.on('nowinner', function(data){
+    alert(data.msg + '<br>' + 'This round\'s answer was ' + data.answer);
+  });
+
+  socket.on('draw_left', function(data){
+    alert(data.msg);
+  });
+    // canvas
+  var canvas = $('#canvas');
+  var ctx = canvas[0].getContext('2d');
+
+  var width = canvas[0].clientWidth;
+  var height = canvas[0].clientHeight;
+
+  canvas[0].width = width;
+  canvas[0].height = height;
+
+  console.log(width, ' ', height);
+
+  var mouse = {
+    click:false,
+    move:false,
+    pos:{x:0, y:0},
+    prev:{x:0,y:0}
+  }
+
+  canvas.on('mousedown', function(){
+    mouse.click = true;
+    console.log(mouse.click);
+  });
+
+  canvas.on('mouseup', function(){
+    mouse.click = false;
+    console.log(mouse.click);
+  });
+
+  canvas.on('mousemove', function(e){
+    mouse.pos.x = e.offsetX / width;
+    mouse.pos.y = e.offsetY / height;
+
+    if(mouse.click){
+      mouse.move = true;
+      console.log(mouse.pos.x +' and ' +mouse.pos.y);
+    }
+  });
+
+  function draw_Line(){
+    if(mouse.move){
+      socket.emit('draw_Line', {line:[mouse.pos, mouse.prev]});
+      mouse.move = false;
+    }
+
+    mouse.prev = {x:mouse.pos.x, y:mouse.pos.y};
+    setTimeout(draw_Line, 25);
+  };
+  draw_Line();
+
+  socket.on('draw_Line', function(data){
+    var line = data.line;
+    ctx.beginPath();
+    ctx.lineJoin="round";
+    ctx.lineCap = 'round';
+    ctx.moveTo(line[0].x * width, line[0].y * height);
+    ctx.lineTo(line[1].x * width, line[1].y * height);
+    ctx.stroke();
+  });
+
+  socket.on('changes', function(data){
+    if(data.color){
+      ctx.strokeStyle = data.color;
+    }else{
+      ctx.lineWidth = data.width;
+
+    }
+  });
+
+  $('.colors').on('click', function(){
+    var color = $(this).attr('id');
+    socket.emit('canvas:change', {color:color});
+  });
+
+  $('.brush').on('click', function(){
+    var width = $(this).attr('id').substring(2);
+    console.log(width);
+    socket.emit('canvas:change', {width:width});
+  });
+
+  function scrollToBottom(target_div){
+    target_div[0].scrollTop = target_div[0].scrollHeight;
+  }
+});
+
+
+</script>
+<% include ../layout/footer%>

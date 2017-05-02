@@ -1,0 +1,105 @@
+<% include ../layout/header%>
+<% include ../layout/navbar%>
+<div class="container">
+  <h3 class="text_center">HighScore</h3>
+  <div class="container">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Username</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%var i =1%>
+        <% list.forEach(function(list){%>
+        <tr>
+          <td><%= i++%></td>
+          <td><%= list.username%></td>
+          <td><%= list.score%></td>
+        </tr>
+        <%})%>
+      </tbody>
+    </table>
+  </div>
+  <hr>
+
+  <div class="rooms clearfix">
+    <a href="/room/a" class="roomSelector" id="A"><button class="btn btn-info  col-xs-3">Join A</button></a>
+    <a href="/room/b" class="roomSelector" id="B"><button class="btn btn-info  col-xs-3">Join B</button></a>
+    <a href="/room/c" class="roomSelector" id="C"><button class="btn btn-info  col-xs-3">Join C</button></a>
+    <a href="/room/d" class="roomSelector" id="D"><button class="btn btn-info  col-xs-3">Join D</button></a>
+  </div>
+  <hr>
+
+  <div class="chat">
+    <div class="col-xs-8 chat-wrapper">
+      <div class="chat-area"></div>
+      <div class="chat-input">
+        <form action="" id="form-msg">
+          <div class="form-group">
+            <input class="form-control" type="text" id="input-msg">
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-xs-4 user-wrapper">
+      <div class="user-list">
+        <p class="text_center">Connected Users in the lobby</p>
+        <div class="lists"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+$(document).ready(function(){
+  var socket = io('/lobby');
+  var name = $('#username').html();
+  // alert(name);
+  $('.roomSelector').on('click', function(e){
+    socket.emit('room', $(this).attr('id'));
+  });
+
+  socket.emit('newUser', name, function(data){
+    if(data){
+      console.log('true');
+    }else{
+      console.log('false');
+    }
+  });
+
+  socket.on('list', function(userList){
+    var users = '';
+    for(var i=0; i < userList.length; i++){
+      users += userList[i] + '<br>';
+    };
+
+    $('.lists').html(users);
+  });
+
+  $('#form-msg').submit(function(e){
+    e.preventDefault();
+    var message = $('#input-msg');
+    if(message.val() === ''){
+      alert('Nothing to send');
+    }else{
+      socket.emit('newMsg', message.val());
+      message.val('');
+    };
+  });
+
+  socket.on('msg', function(data){
+    var chat_area = $('.chat-area');
+    chat_area.append($('<p class=\'lead\'>').text(data.name + ': ' + data.msg));
+    scrollToBottom(chat_area);
+  });
+
+  function scrollToBottom(target_div){
+    target_div[0].scrollTop = target_div[0].scrollHeight;
+  }
+});
+</script>
+<% include ../layout/footer%>

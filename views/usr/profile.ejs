@@ -1,0 +1,10 @@
+<% include ../layout/header%>
+<% include ../layout/navbar%>
+<div class="container">
+  <div class="profile text_center">
+    <h3 class="">User Profile</h3>
+    <p>Currently Logged in as <span><%= user.username%></span></p>
+    <p>Total User Score <span><%= user.score%></span></p>
+  </div>
+</div>
+<% include ../layout/footer%>
