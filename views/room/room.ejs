@@ -119,6 +119,8 @@ $(document).ready(function(){
     var start_btn = $('#start_btn');
     if(start_btn.val() === "Press Start game"){
       start_btn.prop('disabled', false);
+    }else{
+      start_btn.prop('disabled', true);
     }
   });
 
@@ -150,6 +152,7 @@ $(document).ready(function(){
   })
 
   socket.on('all:set', function(data){
+    // console.log('After disconnecting.. ' + data.status);
     if(data.status == 1){
       $('.start_btn').css({
         'opacity':'0',

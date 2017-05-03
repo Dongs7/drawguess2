@@ -80,11 +80,11 @@ module.exports = function(express, app, passport, io){
       room.to(socket.room).emit('roomMsg', {name:sender, msg:data});
     });
 
-    //Whenver the user connects the room,
+    //Whenever the user connects the room,
     //send the current room status to the socket which is recently connected
     socket.on('roomStatus?', function(){
       // console.log('current Num Client?' + numClient);
-      if(roomStatus[socket.room] == 'waiting'){
+      if(roomStatus[socket.room] === 'waiting'){
         updateRoomStatus(room, socket);
       }else{
         socket.emit('all:set',{status:1});
@@ -135,8 +135,8 @@ module.exports = function(express, app, passport, io){
       answer[socket.room] = data;
       console.log('This round\'s answer is ' + answer[socket.room]);
       if(answer[socket.room] != null){
-        timer(room,socket,60);
         roomData[socket.room] = [];
+        timer(room,socket,60);
         room.to(socket.room).emit('all:set',{status:1});
         roomStatus[socket.room] = 'playing';
       }
@@ -146,6 +146,7 @@ module.exports = function(express, app, passport, io){
 
 
     socket.on('disconnect', function(){
+      updateUser(room, socket);
       if(clients[socket.room]){
         clients[socket.room].splice(clients[socket.room].indexOf(socket.name),1);
       }
@@ -154,7 +155,7 @@ module.exports = function(express, app, passport, io){
         roomUsers[socket.room].splice(roomUsers[socket.room].indexOf(socket),1);
       }
 
-      if(socket.name == drawer[socket.room]){
+      if(socket.name === drawer[socket.room]){
         room.to(socket.room).emit('draw_left', {msg:'Draw left the room. Game will reset'});
         console.log('After cancelled, room users are ' + clients[socket.room]);
         updateUser(room, socket);
@@ -168,8 +169,6 @@ module.exports = function(express, app, passport, io){
       }
 
       socket.leave(socket.room);
-      updateUser(room, socket);
-
 
     });
   });
@@ -183,24 +182,28 @@ module.exports = function(express, app, passport, io){
   }
 
   function updateRoomStatus(room,socket){
-    //Set room status as 0 -> waiting
-    room.to(socket.room).emit('all:set',{status:0});
-    //Set room status to 'waiting'
-    roomStatus[socket.room] = 'waiting';
+    // updateUser(room,socket);
+    // console.log('Total number of users' + numClient);
+
+
     //Delete Room data
     delete roomData[socket.room];
     if(numClient <= 1){
+      room.to(socket.room).emit('all:set',{status:0});
+      roomStatus[socket.room] = 'waiting';
       delete answer[socket.room];
       delete drawer[socket.room];
       room.to(socket.room).emit('updateRoomStatus', {msg:'waiting for players..'});
     }else{
       setTimeout(function(){
-        if(roomStatus[socket.room] === 'waiting'){
+        // if(roomStatus[socket.room] == 'waiting'){
           delete answer[socket.room];
           delete drawer[socket.room];
           room.to(socket.room).emit('updateRoomStatus', {msg:'Waiting to start a game'});
-          room.to(roomUsers[socket.room][0].id).emit('updateRoomStatus', {msg:'Press Start game'});
-        }
+          if(roomUsers[socket.room]){
+            room.to(roomUsers[socket.room][0].id).emit('updateRoomStatus', {msg:'Press Start game'});
+          }
+        // }
       }, 500);
     }
   }
