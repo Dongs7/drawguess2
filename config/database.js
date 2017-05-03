@@ -1,8 +1,8 @@
 var mongoose = require('mongoose');
 
 mongoose.Promise = global.Promise;
-// mongoose.connect(process.env.MONGO_DB);
-mongoose.connect('mongodb://test:test@ds135800.mlab.com:35800/dongs8canvas');
+mongoose.connect(process.env.MONGO_DB);
+
 
 
 var db = mongoose.connection;
