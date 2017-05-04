@@ -1,22 +1,26 @@
 <% include ../layout/header%>
 <% include ../layout/navbar%>
+<% include ../layout/modal%>
 <h4 class="lead text_center">Room <%= roomname%></h4>
 <div class="container">
   <div class="status_bar">
     <div class="row">
-      <div class="col-xs-4">
+      <div class="col-xs-3">
         <div class="colors" id="red"></div>
         <div class="colors" id="yellow"></div>
         <div class="colors" id="blue"></div>
         <div class="colors" id="black"></div>
       </div>
-      <div class="col-xs-4">
+      <div class="col-xs-3">
         <p class="text_center player_notify"></p>
       </div>
-      <div class="col-xs-4 text_center">
+      <div class="col-xs-3 text_center">
         <div class="brush" id="b_15">15</div>
         <div class="brush" id="b_10">10</div>
         <div class="brush" id="b_5">5</div>
+      </div>
+      <div class="col-xs-3 text_center">
+        <button id="clearCanvas" class="float_right">clear</button>
       </div>
     </div>
 
@@ -75,7 +79,8 @@ $(document).ready(function(){
     e.preventDefault();
     var room_msg = $('#input-msg');
     if(room_msg.val() === ''){
-      alert('Nothing to send');
+      $('#alert').find('.modal-body').text('Nothing to send');
+      $('#alert').modal();
     }else{
       socket.emit('newMsg', room_msg.val());
       room_msg.val('');
@@ -107,8 +112,8 @@ $(document).ready(function(){
     var userList = data.list;
     var userNum = data.num;
     for (var i = 0; i < userList.length; i++){
-      list += userList[i] + '<br>'
-    }
+      list += '<p class="userlist text_center">' + userList[i] + '</span>' + '<br>';
+    };
     $('.userList').html(list);
     $('#totalUser').html(userNum + '/'+data.maxClient);
   });
@@ -128,6 +133,13 @@ $(document).ready(function(){
     socket.emit('start:game');
   });
 
+  $('#clearCanvas').on('click', function(e){
+    socket.emit('clear:canvas');
+  });
+
+  socket.on('clear:canvas', function(data){
+    ctx.clearRect(0,0,width,height);
+  });
 
 
   socket.on('setup:answer', function(data){
@@ -139,7 +151,7 @@ $(document).ready(function(){
         var answer = prompt('Please enter your answer');
         if(answer == '' || answer == null)
         {
-          alert('Answer cannot be empty');
+        alert('Answer cannot be null')
         }else{
           isEmpty = true;
         }
@@ -183,17 +195,22 @@ $(document).ready(function(){
   });
 
   socket.on('winner', function(data){
-    alert(data.msg +' , and the winner is ' + data.winner + '. The Winner will get 10 points');
+    $('#alert').find('.modal-body').text(data.msg +' , and the winner is ' + data.winner + '. The Winner will get 10 points');
+    $('#alert').modal();
+
     //여기 다시제대로
     socket.emit('roomStatus?');
   });
 
   socket.on('nowinner', function(data){
-    alert(data.msg + '<br>' + 'This round\'s answer was ' + data.answer);
+    $('#alert').find('.modal-body').text(data.msg + '<br>' + 'This round\'s answer was ' + data.answer);
+    $('#alert').modal();
+
   });
 
   socket.on('draw_left', function(data){
-    alert(data.msg);
+    $('#alert').find('.modal-body').text(data.msg);
+    $('#alert').modal();
   });
     // canvas
   var canvas = $('#canvas');

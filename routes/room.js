@@ -22,17 +22,14 @@ module.exports = function(express, app, passport, io){
   var drawer = {};
   var roomData = {};
 
-  // var numClient = socket.adapter.rooms[socket.room].length;
   room.on('connection', function(socket){
     socket.room = roomName;
-
-    // console.log('Currently connected room name ' + socket.room);
 
     socket.on('userName', function(username){
       socket.name = username;
       socket.join(socket.room);
-      // console.log('User : ' + socket.name + ' is in the Room : ' + socket.room);
 
+      //Initialize user and room data if needed
       if(!roomUsers[socket.room] && !clients[socket.room] && !roomStatus[socket.room]){
         roomUsers[socket.room] = [];
         clients[socket.room] =[];
@@ -41,6 +38,7 @@ module.exports = function(express, app, passport, io){
 
       roomUsers[socket.room].push(socket);
       clients[socket.room].push(socket.name);
+
       updateUser(room, socket);
 
       if(roomStatus[socket.room] == 'waiting'){
@@ -70,7 +68,8 @@ module.exports = function(express, app, passport, io){
           room.to(socket.room).emit('winner',{msg:'We have winner!', winner:sender});
           updateScore(sender);
           stopTimer(socket,room,roomTimer);
-          //Timer section
+          roomStatus[socket.room] = 'waiting';
+
           setTimeout(function(){
               updateRoomStatus(room,socket);
           },1000);
@@ -124,10 +123,10 @@ module.exports = function(express, app, passport, io){
     socket.on('start:game', function(){
       var index = getPlayer(room,socket,numClient);
       drawer[socket.room] = roomUsers[socket.room][index].name;
-      console.log('This round drawer is ' + drawer);
+      // console.log('This round drawer is ' + drawer);
       room.to(socket.room).emit('setup:answer', {status:100, msg:'The drawer is setting the answer..'});
       room.to(roomUsers[socket.room][index].id).emit('setup:answer', {status:99, msg:'You are the drawer'});
-      // room.to(socket.room).emit('start:game:data', )
+
     });
 
     //Set an answer for the game then set room status as playing
@@ -142,10 +141,13 @@ module.exports = function(express, app, passport, io){
       }
     });
 
-
+    socket.on('clear:canvas', function(data){
+      room.to(socket.room).emit('clear:canvas');
+    });
 
 
     socket.on('disconnect', function(){
+
       updateUser(room, socket);
       if(clients[socket.room]){
         clients[socket.room].splice(clients[socket.room].indexOf(socket.name),1);
@@ -158,12 +160,15 @@ module.exports = function(express, app, passport, io){
       if(socket.name === drawer[socket.room]){
         room.to(socket.room).emit('draw_left', {msg:'Draw left the room. Game will reset'});
         console.log('After cancelled, room users are ' + clients[socket.room]);
+        roomStatus[socket.room] = 'waiting';
         updateUser(room, socket);
         updateRoomStatus(room, socket);
         stopTimer(socket,room, roomTimer);
       }
 
       if(numClient <= 1){
+        updateUser(room, socket);
+        roomStatus[socket.room] = 'waiting';
         updateRoomStatus(room, socket);
         stopTimer(socket,room, roomTimer);
       }
@@ -182,28 +187,24 @@ module.exports = function(express, app, passport, io){
   }
 
   function updateRoomStatus(room,socket){
-    // updateUser(room,socket);
-    // console.log('Total number of users' + numClient);
+    resetRoom(room,socket, roomStatus);
 
-
-    //Delete Room data
-    delete roomData[socket.room];
     if(numClient <= 1){
-      room.to(socket.room).emit('all:set',{status:0});
-      roomStatus[socket.room] = 'waiting';
-      delete answer[socket.room];
-      delete drawer[socket.room];
+      if(answer || drawer){
+        delete answer[socket.room];
+        delete drawer[socket.room];
+      }
       room.to(socket.room).emit('updateRoomStatus', {msg:'waiting for players..'});
     }else{
       setTimeout(function(){
-        // if(roomStatus[socket.room] == 'waiting'){
-          delete answer[socket.room];
-          delete drawer[socket.room];
+          if(answer || drawer){
+            delete answer[socket.room];
+            delete drawer[socket.room];
+          }
           room.to(socket.room).emit('updateRoomStatus', {msg:'Waiting to start a game'});
           if(roomUsers[socket.room]){
             room.to(roomUsers[socket.room][0].id).emit('updateRoomStatus', {msg:'Press Start game'});
           }
-        // }
       }, 500);
     }
   }
@@ -225,6 +226,7 @@ module.exports = function(express, app, passport, io){
         setTimeout(function(){
           room.to(socket.room).emit('nowinner', {answer:answer[socket.room], msg:'No one got the answer'});
         },100);
+        roomStatus[socket.room] = 'waiting';
         updateRoomStatus(room,socket);
       }
     },1000);
@@ -235,6 +237,14 @@ module.exports = function(express, app, passport, io){
 function stopTimer(socket,room, roomTimer){
   clearInterval(roomTimer[socket.room]);
   room.to(socket.room).emit('timer', 'time is up');
+}
+
+function resetRoom(room,socket, roomStatus){
+  // roomStatus[socket.room] = 'waiting';
+  room.to(socket.room).emit('all:set',{status:0});
+  if(roomData){
+    delete roomData[socket.room];
+  }
 }
 
 //If there is a winner, update database

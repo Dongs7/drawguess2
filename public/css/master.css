@@ -17,6 +17,9 @@ body{
 .float_left{
   float: left;
 }
+.float_right{
+  float: right;
+}
 .debug{
   border:1px solid black;
 }
@@ -159,7 +162,7 @@ body{
 }
 
 .brush{
-  float:right;
+  /*float:right;*/
 }
 
 #red{
@@ -233,4 +236,14 @@ body{
   bottom:0;
   margin:auto;
   z-index:4;
+}
+p.userlist{
+  margin:0;
+  padding:0;
+}
+
+p.userlist:nth-child(odd){
+  width:100%;
+  background-color:lightgray;
+
 }
