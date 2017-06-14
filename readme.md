@@ -1,5 +1,6 @@
 #DrawGuess
 
+![]("https://github.com/Dongs7/img/blob/master/drawguess/draw2.PNG")
 A web application utilizing Node.js, express.js, Twitter bootstrap
 MongoDB and socket.io
 
