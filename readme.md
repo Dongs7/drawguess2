@@ -1,10 +1,12 @@
 #DrawGuess
 
-![]("https://github.com/Dongs7/img/blob/master/drawguess/draw2.PNG")
+## simple web-based game to figure out what the other players are drawing
+
+![](https://github.com/Dongs7/img/blob/master/drawguess/draw2.PNG)
+
 A web application utilizing Node.js, express.js, Twitter bootstrap
 MongoDB and socket.io
 
-This is a simple web-based game to figure out what the other players are drawing.
 
 demo: <a href="https://drawguess.herokuapp.com/">Click here</a>
 
